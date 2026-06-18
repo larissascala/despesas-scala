@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: scala-acustica
+    runtime: node
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile=false && pnpm --filter @workspace/api-server run build
+    startCommand: node artifacts/api-server/dist/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLICKUP_API_TOKEN
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

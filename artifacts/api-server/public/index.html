@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scala Acústica · Despesas</title>
+  <style>
+    :root {
+      --bg: #111318;
+      --accent: #2AAAE2;
+      --card: rgba(255,255,255,.05);
+      --border: rgba(255,255,255,.08);
+      --text: #f0f2f5;
+      --muted: rgba(255,255,255,.45);
+      --radius: 12px;
+      --orange: #F5A11A;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Color bars ── */
+    .color-bar { display: flex; width: 100%; }
+    .color-bar > span { flex: 1; display: block; height: 5px; }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 660px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+      flex: 1;
+    }
+
+    /* ── Header ── */
+    header { text-align: center; margin-bottom: 28px; }
+    .logo-bar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px; }
+    .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+    header h1 { font-size: 21px; font-weight: 700; letter-spacing: .02em; }
+    header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+
+    /* ── Technician dropdown ── */
+    .field-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 7px;
+    }
+    select#technician {
+      width: 100%;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 36px 10px 13px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 13px center;
+      transition: border-color .15s;
+    }
+    select#technician:focus { border-color: var(--accent); }
+    select#technician option { background: #1c2030; color: var(--text); }
+    select#technician.unset { color: var(--muted); }
+
+    /* ── Code input ── */
+    .code-row { display: flex; gap: 8px; }
+    .code-row input {
+      flex: 1;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 13px;
+      font-family: 'SFMono-Regular', 'SF Mono', 'Menlo', monospace;
+      letter-spacing: .05em;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .code-row input:focus { border-color: var(--accent); }
+    .code-row input::placeholder { color: var(--muted); font-family: inherit; }
+
+    .btn {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: .82; }
+    .btn:disabled { opacity: .38; cursor: not-allowed; }
+
+    /* ── Tags ── */
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .tags-empty { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 10px; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 20px; padding: 5px 11px 5px 10px;
+      font-size: 12px; font-weight: 600;
+      font-family: 'SFMono-Regular', 'SF Mono', 'Menlo', monospace;
+    }
+    .tag.searching { background: rgba(245,230,26,.12); border: 1px solid rgba(245,230,26,.35); color: #F5E61A; }
+    .tag.found     { background: rgba(42,170,226,.12);  border: 1px solid rgba(42,170,226,.35);  color: #5cc8ed; }
+    .tag.not-found { background: rgba(228,43,43,.12);   border: 1px solid rgba(228,43,43,.35);   color: #f07070; }
+    .tag-icon { font-size: 11px; flex-shrink: 0; }
+    .tag-label { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tag-sub { font-weight: 400; opacity: .65; }
+    .tag-rm { cursor: pointer; opacity: .55; font-size: 15px; line-height: 1; padding-left: 2px; transition: opacity .1s; flex-shrink: 0; }
+    .tag-rm:hover { opacity: 1; }
+    .spinner {
+      width: 10px; height: 10px;
+      border: 2px solid rgba(245,230,26,.25); border-top-color: #F5E61A;
+      border-radius: 50%; animation: spin .65s linear infinite; flex-shrink: 0;
+    }
+    .btn-spinner {
+      width: 12px; height: 12px;
+      border: 2px solid rgba(0,0,0,.25); border-top-color: #000;
+      border-radius: 50%; animation: spin .65s linear infinite;
+      display: inline-block; margin-right: 6px; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Expense grid ── */
+    .expense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .expense-field { display: flex; flex-direction: column; gap: 5px; }
+    .expense-field.full { grid-column: 1 / -1; }
+    .expense-field label {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+    }
+    .expense-field input {
+      background: rgba(255,255,255,.06); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 14px;
+      padding: 9px 12px; outline: none; width: 100%;
+      transition: border-color .15s; -moz-appearance: textfield;
+    }
+    .expense-field input[type=number]::-webkit-outer-spin-button,
+    .expense-field input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .expense-field input:focus { border-color: var(--accent); }
+    .expense-field input::placeholder { color: var(--muted); }
+    .expense-field input[type=text] { margin-top: 5px; }
+
+    .total-row {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--border);
+    }
+    .total-lbl { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+    .total-num { font-size: 22px; font-weight: 800; color: var(--text); }
+    .per-svc { font-size: 12px; color: var(--muted); text-align: right; margin-top: 2px; }
+
+    /* ── Observations ── */
+    .obs-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .obs-head .card-title { margin-bottom: 0; }
+    .warn-badge {
+      background: rgba(245,161,26,.12); border: 1px solid rgba(245,161,26,.35);
+      color: var(--orange); border-radius: 20px; padding: 3px 10px;
+      font-size: 11px; font-weight: 700; letter-spacing: .04em; display: none;
+    }
+    .warn-badge.on { display: inline-block; }
+
+    textarea {
+      width: 100%; min-height: 80px;
+      background: rgba(255,255,255,.06); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 14px;
+      padding: 10px 13px; outline: none; resize: vertical;
+      font-family: inherit; line-height: 1.6; transition: border-color .15s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+
+    /* ── Submit ── */
+    .submit-btn {
+      width: 100%; padding: 15px; background: var(--accent); color: #000;
+      border: none; border-radius: var(--radius); font-size: 15px; font-weight: 800;
+      cursor: pointer; letter-spacing: .02em; transition: opacity .15s, transform .1s;
+      margin-bottom: 14px;
+    }
+    .submit-btn:hover:not(:disabled) { opacity: .83; }
+    .submit-btn:active:not(:disabled) { transform: scale(.99); }
+    .submit-btn:disabled { opacity: .38; cursor: not-allowed; }
+
+    /* ── Result ── */
+    .result { display: none; border-radius: var(--radius); padding: 14px 16px; font-size: 14px; font-weight: 500; margin-bottom: 14px; }
+    .result.ok  { display: block; background: rgba(42,170,226,.1);  border: 1px solid rgba(42,170,226,.3);  color: #7dd8f5; }
+    .result.err { display: block; background: rgba(228,43,43,.1);   border: 1px solid rgba(228,43,43,.3);   color: #f08080; }
+    .result-sub { margin-top: 5px; font-size: 12px; opacity: .8; }
+
+    .split-info {
+      font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 12px;
+      padding: 8px 14px; background: rgba(42,170,226,.07);
+      border: 1px solid rgba(42,170,226,.15); border-radius: 8px; display: none;
+    }
+    .split-info.on { display: block; }
+
+    @media (max-width: 480px) {
+      .expense-grid { grid-template-columns: 1fr; }
+      .expense-field.full { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="color-bar">
+  <span style="background:#E42B2B"></span>
+  <span style="background:#F5A11A"></span>
+  <span style="background:#F5E61A"></span>
+  <span style="background:#2AAAE2"></span>
+  <span style="background:#2B3FA0"></span>
+</div>
+
+<div class="container">
+  <header>
+    <div class="logo-bar">
+      <div class="logo-dot"></div>
+      <h1>Scala Acústica</h1>
+      <div class="logo-dot"></div>
+    </div>
+    <p>Lançador de despesas operacionais</p>
+  </header>
+
+  <!-- Técnico responsável -->
+  <div class="card">
+    <label class="field-label" for="technician">Técnico responsável</label>
+    <select id="technician" class="unset">
+      <option value="">Carregando membros…</option>
+    </select>
+  </div>
+
+  <!-- Serviços -->
+  <div class="card">
+    <div class="card-title">Serviços do deslocamento</div>
+    <div class="code-row">
+      <input id="code-input" type="text" placeholder="Ex: SLAB.389 ou SPRO.012"
+        autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      <button class="btn" onclick="handleAdd()">Adicionar</button>
+    </div>
+    <div id="tags"></div>
+  </div>
+
+  <!-- Despesas -->
+  <div class="card">
+    <div class="card-title">Despesas</div>
+    <div class="expense-grid" id="expense-grid"></div>
+    <div class="total-row">
+      <span class="total-lbl">Total</span>
+      <div>
+        <div class="total-num" id="total-num">R$&nbsp;0,00</div>
+        <div class="per-svc" id="per-svc"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Observações -->
+  <div class="card">
+    <div class="obs-head">
+      <div class="card-title">Observações</div>
+      <span class="warn-badge" id="warn">⚠ Pagamento direto detectado</span>
+    </div>
+    <textarea id="obs" placeholder="Anotações adicionais sobre o deslocamento…" rows="3"></textarea>
+  </div>
+
+  <div class="split-info" id="split-info"></div>
+  <div class="result" id="result"></div>
+  <button class="submit-btn" id="submit-btn" onclick="handleSubmit()">
+    Lançar despesas no ClickUp
+  </button>
+</div>
+
+<div class="color-bar">
+  <span style="background:#E42B2B"></span>
+  <span style="background:#F5A11A"></span>
+  <span style="background:#F5E61A"></span>
+  <span style="background:#2AAAE2"></span>
+  <span style="background:#2B3FA0"></span>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────
+const FIELDS = [
+  { key: 'alimentacao',    label: 'Alimentação' },
+  { key: 'combustivel',   label: 'Combustível' },
+  { key: 'hotel',         label: 'Hotel' },
+  { key: 'uber',          label: 'Uber / Táxi' },
+  { key: 'aereo',         label: 'Aéreo' },
+  { key: 'transporte',    label: 'Transporte executivo' },
+  { key: 'pedagio',       label: 'Pedágio' },
+  { key: 'estacionamento', label: 'Estacionamento' },
+];
+const WARN_WORDS = ['dinheiro', 'reembolso', 'paguei'];
+const fmt = n => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+
+// ── State ────────────────────────────────────────────────────────────────
+let codes    = [];
+let expenses = {};
+let outrosDesc = '';
+
+// ── Load technicians into select ─────────────────────────────────────────
+async function loadTechnicians() {
+  const sel = document.getElementById('technician');
+  try {
+    const res  = await fetch('/api/team-members');
+    const data = await res.json();
+    if (!res.ok || !data.members?.length) throw new Error(data.error || 'Sem membros');
+    sel.innerHTML =
+      '<option value="">— Selecione o técnico —</option>' +
+      data.members.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+    sel.classList.add('unset');
+  } catch (err) {
+    sel.innerHTML = '<option value="">Erro ao carregar membros</option>';
+  }
+}
+
+document.getElementById('technician').addEventListener('change', function () {
+  this.classList.toggle('unset', !this.value);
+});
+
+// ── Expense grid ─────────────────────────────────────────────────────────
+function buildGrid() {
+  const grid = document.getElementById('expense-grid');
+  let html = FIELDS.map(f => `
+    <div class="expense-field">
+      <label>${f.label}</label>
+      <input type="number" min="0" step="0.01" placeholder="0,00" id="exp-${f.key}"
+        oninput="onExp('${f.key}', this.value)">
+    </div>`).join('');
+  html += `
+    <div class="expense-field full">
+      <label>Outros</label>
+      <input type="number" min="0" step="0.01" placeholder="0,00" id="exp-outros"
+        oninput="onExp('outros', this.value)">
+      <input type="text" placeholder="Descreva os outros gastos…" id="exp-outros-desc"
+        oninput="outrosDesc = this.value">
+    </div>`;
+  grid.innerHTML = html;
+  FIELDS.forEach(f => expenses[f.key] = 0);
+  expenses.outros = 0;
+}
+
+function onExp(key, val) {
+  expenses[key] = Math.max(0, parseFloat(val) || 0);
+  refresh();
+}
+
+// ── Total ────────────────────────────────────────────────────────────────
+function total() {
+  return Object.values(expenses).reduce((s, v) => s + v, 0);
+}
+
+// ── Tags ─────────────────────────────────────────────────────────────────
+function renderTags() {
+  const el = document.getElementById('tags');
+  if (!codes.length) {
+    el.innerHTML = '<div class="tags-empty">Nenhum serviço adicionado</div>';
+    return;
+  }
+  el.innerHTML = `<div class="tags">${codes.map(c => {
+    let icon, cls;
+    if (c.status === 'searching') { icon = '<div class="spinner"></div>'; cls = 'searching'; }
+    else if (c.status === 'found')   { icon = '<span class="tag-icon">✓</span>'; cls = 'found'; }
+    else                             { icon = '<span class="tag-icon">✗</span>'; cls = 'not-found'; }
+    const sub = c.taskName
+      ? ` <span class="tag-sub">· ${c.taskName.slice(0, 28)}${c.taskName.length > 28 ? '…' : ''}</span>`
+      : '';
+    return `<span class="tag ${cls}">${icon}<span class="tag-label">${c.code}${sub}</span><span class="tag-rm" onclick="rmCode('${c.code}')">×</span></span>`;
+  }).join('')}</div>`;
+}
+
+function rmCode(code) {
+  codes = codes.filter(c => c.code !== code);
+  refresh();
+}
+
+// ── Refresh ───────────────────────────────────────────────────────────────
+function refresh() {
+  renderTags();
+  const t     = total();
+  const found = codes.filter(c => c.status === 'found');
+  document.getElementById('total-num').textContent = fmt(t);
+  const perSvcEl = document.getElementById('per-svc');
+  const splitEl  = document.getElementById('split-info');
+  if (found.length > 1 && t > 0) {
+    const ps = t / found.length;
+    perSvcEl.textContent = `${fmt(ps)} por serviço (${found.length} serviços)`;
+    splitEl.textContent  = `💡 Total de ${fmt(t)} dividido igualmente entre ${found.length} serviços → ${fmt(ps)} cada`;
+    splitEl.classList.add('on');
+  } else {
+    perSvcEl.textContent = '';
+    splitEl.classList.remove('on');
+  }
+}
+
+// ── Search task ───────────────────────────────────────────────────────────
+async function searchTask(code) {
+  try {
+    const res  = await fetch('/api/search-task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+    const entry = codes.find(c => c.code === code);
+    if (!entry) return;
+    if (res.ok && data.found) {
+      entry.status   = 'found';
+      entry.taskId   = data.taskId;
+      entry.taskName = data.taskName;
+    } else {
+      entry.status = 'not-found';
+    }
+  } catch {
+    const entry = codes.find(c => c.code === code);
+    if (entry) entry.status = 'not-found';
+  }
+  refresh();
+}
+
+function handleAdd() {
+  const input = document.getElementById('code-input');
+  const code  = input.value.trim().toUpperCase();
+  if (!code) return;
+  if (codes.find(c => c.code === code)) { input.value = ''; input.focus(); return; }
+  codes.push({ code, status: 'searching' });
+  refresh();
+  input.value = '';
+  input.focus();
+  searchTask(code);
+}
+
+document.getElementById('code-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleAdd();
+});
+
+// ── Observations warning ──────────────────────────────────────────────────
+document.getElementById('obs').addEventListener('input', function () {
+  const hit = WARN_WORDS.some(w => this.value.toLowerCase().includes(w));
+  document.getElementById('warn').classList.toggle('on', hit);
+});
+
+// ── Build descricao ───────────────────────────────────────────────────────
+function buildDescricao(techName) {
+  const date   = new Date().toLocaleDateString('pt-BR');
+  const found  = codes.filter(c => c.status === 'found');
+  const t      = total();
+  const perSvc = found.length > 1 ? t / found.length : t;
+
+  const lines = [
+    `Lançado por: ${techName}`,
+    '',
+    `Data: ${date}`,
+    `Serviços: ${found.map(c => c.code).join(', ')}`,
+    '',
+  ];
+
+  const expLines = FIELDS
+    .filter(f => expenses[f.key] > 0)
+    .map(f => `  ${f.label}: ${fmt(expenses[f.key])}`);
+  if (expenses.outros > 0) {
+    const desc = outrosDesc ? ` (${outrosDesc})` : '';
+    expLines.push(`  Outros${desc}: ${fmt(expenses.outros)}`);
+  }
+  if (expLines.length) lines.push('Despesas:', ...expLines, '');
+
+  lines.push(
+    found.length > 1 ? `Total: ${fmt(t)} — ${fmt(perSvc)} por serviço` : `Total: ${fmt(t)}`,
+    '',
+  );
+
+  const obs = document.getElementById('obs').value.trim();
+  if (obs) lines.push(`Observações: ${obs}`);
+  return lines.join('\n');
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────
+async function handleSubmit() {
+  clearResult();
+  const techName = document.getElementById('technician').value;
+  const found    = codes.filter(c => c.status === 'found');
+  const t        = total();
+
+  if (!techName) {
+    showResult('err', 'Técnico não selecionado.', 'Selecione o técnico responsável antes de lançar.');
+    return;
+  }
+  if (found.length === 0) {
+    showResult('err', 'Nenhum serviço encontrado.', 'Adicione ao menos um código de serviço válido (tag azul) antes de lançar.');
+    return;
+  }
+  if (t <= 0) {
+    showResult('err', 'Nenhuma despesa informada.', 'Preencha ao menos um campo de despesa com valor maior que zero.');
+    return;
+  }
+
+  const perSvc    = found.length > 1 ? t / found.length : t;
+  const value     = Math.round(perSvc * 100) / 100;
+  const descricao = buildDescricao(techName);
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span>Lançando…';
+
+  try {
+    const res  = await fetch('/api/bulk-update-field', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codes: found.map(c => c.code), value, descricao }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showResult('ok', '✓ Despesas lançadas com sucesso!',
+        `${data.succeeded} de ${data.total} serviço(s) atualizado(s) com ${fmt(value)} cada.`);
+      if (data.failed === 0) setTimeout(resetForm, 2000);
+    } else {
+      showResult('err', 'Erro ao lançar despesas.', data.error || JSON.stringify(data));
+    }
+  } catch (err) {
+    showResult('err', 'Falha de comunicação com o servidor.', String(err));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Lançar despesas no ClickUp';
+  }
+}
+
+function showResult(cls, title, sub) {
+  const el = document.getElementById('result');
+  el.className = `result ${cls}`;
+  el.innerHTML = `<strong>${title}</strong><div class="result-sub">${sub}</div>`;
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function clearResult() {
+  document.getElementById('result').className = 'result';
+}
+
+function resetForm() {
+  codes = [];
+  Object.keys(expenses).forEach(k => expenses[k] = 0);
+  outrosDesc = '';
+  FIELDS.forEach(f => { const el = document.getElementById(`exp-${f.key}`); if (el) el.value = ''; });
+  ['exp-outros', 'exp-outros-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('obs').value = '';
+  document.getElementById('warn').classList.remove('on');
+  clearResult();
+  refresh();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+buildGrid();
+refresh();
+loadTechnicians();
+</script>
+</body>
+</html>
