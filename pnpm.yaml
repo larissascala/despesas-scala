@@ -1,0 +1,4 @@
+onlyBuiltDependencies:
+  - esbuild
+  - thread-stream
+  - pino-pretty
