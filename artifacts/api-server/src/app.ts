@@ -26,7 +26,29 @@ app.use(
     },
   }),
 );
-app.use(cors());
+const allowedOrigins = new Set<string>([
+  "http://localhost:3000",
+  "http://localhost:5173",
+  ...(process.env["RAILWAY_PUBLIC_DOMAIN"]
+    ? [`https://${process.env["RAILWAY_PUBLIC_DOMAIN"]}`]
+    : []),
+  ...(process.env["ALLOWED_ORIGINS"]
+    ? process.env["ALLOWED_ORIGINS"].split(",").map((o) => o.trim())
+    : []),
+]);
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin || process.env["NODE_ENV"] !== "production") return cb(null, true);
+      cb(
+        allowedOrigins.has(origin) ? null : new Error(`CORS: origin not allowed — ${origin}`),
+        allowedOrigins.has(origin),
+      );
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
